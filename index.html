@@ -1,224 +1,25 @@
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<div class="container">
+  <h1>카드 짝 맞추기</h1>
 
-<title>카드게임</title>
+  <div id="start-screen">
+    <input
+      type="text"
+      id="studentId"
+      placeholder="학번 입력"
+    />
 
-<style>
-
-body{
-    font-family:sans-serif;
-    background:#f5f5f5;
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    min-height:100vh;
-    margin:0;
-}
-
-.container{
-    text-align:center;
-}
-
-input{
-    padding:10px;
-    margin:5px;
-    width:220px;
-    font-size:16px;
-}
-
-button{
-    padding:10px 20px;
-    margin-top:10px;
-    font-size:16px;
-}
-
-.game-board{
-    display:grid;
-    grid-template-columns:repeat(3,120px);
-    gap:15px;
-    margin-top:20px;
-}
-
-.card{
-    width:120px;
-    height:160px;
-    background:#4a90e2;
-    border-radius:12px;
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    font-size:40px;
-    font-weight:bold;
-    color:transparent;
-    cursor:pointer;
-}
-
-.card.open{
-    background:white;
-    color:black;
-}
-
-.hidden{
-    display:none;
-}
-
-</style>
-</head>
-
-<body>
-
-<div class="container" id="login">
-
-    <h1>카드 짝맞추기</h1>
-
-    <input type="text" id="studentId" placeholder="학번 입력">
-    <br>
-
-    <input type="text" id="studentName" placeholder="이름 입력">
-    <br>
+    <input
+      type="text"
+      id="name"
+      placeholder="이름 입력"
+    />
 
     <button onclick="startGame()">
-        시작하기
+      게임 시작
     </button>
+  </div>
 
-    <p id="msg"></p>
+  <div id="game-board"></div>
 
+  <div id="result"></div>
 </div>
-
-<div class="container hidden" id="game">
-
-    <h2 id="scoreText">
-        점수 : 0
-    </h2>
-
-    <div class="game-board" id="board"></div>
-
-</div>
-
-<script>
-
-const login = document.getElementById("login");
-const game = document.getElementById("game");
-const board = document.getElementById("board");
-const msg = document.getElementById("msg");
-const scoreText = document.getElementById("scoreText");
-
-let numbers = [1,1,2,2,3,3];
-
-let firstCard = null;
-let secondCard = null;
-
-let score = 0;
-let opened = 0;
-
-let studentId = "";
-let studentName = "";
-
-async function startGame(){
-
-    studentId = document.getElementById("studentId").value.trim();
-
-    studentName = document.getElementById("studentName").value.trim();
-
-    if(studentId === "" || studentName === ""){
-        msg.innerText = "학번과 이름을 입력하세요";
-        return;
-    }
-
-    const check = await fetch(`/api/check?id=${studentId}`);
-
-    const result = await check.json();
-
-    if(result.exists){
-        msg.innerText = "이미 참여했습니다";
-        return;
-    }
-
-    login.classList.add("hidden");
-
-    game.classList.remove("hidden");
-
-    createCards();
-}
-
-function createCards(){
-
-    numbers.sort(() => Math.random() - 0.5);
-
-    numbers.forEach(number => {
-
-        const card = document.createElement("div");
-
-        card.className = "card";
-
-        card.innerText = number;
-
-        card.dataset.number = number;
-
-        card.addEventListener("click", async () => {
-
-            if(card.classList.contains("open")){
-                return;
-            }
-
-            card.classList.add("open");
-
-            opened++;
-
-            if(firstCard === null){
-
-                firstCard = card;
-                return;
-            }
-
-            secondCard = card;
-
-            if(firstCard.dataset.number === secondCard.dataset.number){
-
-                score++;
-
-                scoreText.innerText = `점수 : ${score}`;
-            }
-
-            firstCard = null;
-            secondCard = null;
-
-            if(opened === 6){
-
-                await fetch("/api/save", {
-
-                    method:"POST",
-
-                    headers:{
-                        "Content-Type":"application/json"
-                    },
-
-                    body:JSON.stringify({
-                        studentId,
-                        studentName,
-                        score
-                    })
-
-                });
-
-                setTimeout(() => {
-
-                    alert(`게임 종료!\n최종 점수 : ${score}점`);
-
-                },300);
-            }
-
-        });
-
-        board.appendChild(card);
-
-    });
-}
-
-</script>
-
-</body>
-</html>
