@@ -11,12 +11,9 @@
 body{
     font-family:sans-serif;
     background:#f5f5f5;
-
     display:flex;
-    flex-direction:column;
-    align-items:center;
     justify-content:center;
-
+    align-items:center;
     min-height:100vh;
     margin:0;
 }
@@ -36,7 +33,6 @@ button{
     padding:10px 20px;
     margin-top:10px;
     font-size:16px;
-    cursor:pointer;
 }
 
 .game-board{
@@ -49,35 +45,20 @@ button{
 .card{
     width:120px;
     height:160px;
-
     background:#4a90e2;
     border-radius:12px;
-
     display:flex;
     justify-content:center;
     align-items:center;
-
     font-size:40px;
     font-weight:bold;
-
     color:transparent;
-
     cursor:pointer;
-
-    user-select:none;
-
-    transition:0.2s;
 }
 
 .card.open{
     background:white;
     color:black;
-}
-
-.card.done{
-    background:#cccccc;
-    color:black;
-    cursor:default;
 }
 
 .hidden{
@@ -89,7 +70,7 @@ button{
 
 <body>
 
-<div class="container" id="loginScreen">
+<div class="container" id="login">
 
     <h1>카드 짝맞추기</h1>
 
@@ -100,17 +81,16 @@ button{
     <br>
 
     <button onclick="startGame()">
-        게임 시작
+        시작하기
     </button>
 
-    <p id="message"></p>
+    <p id="msg"></p>
 
 </div>
 
+<div class="container hidden" id="game">
 
-<div class="container hidden" id="gameScreen">
-
-    <h2 id="score">
+    <h2 id="scoreText">
         점수 : 0
     </h2>
 
@@ -120,17 +100,11 @@ button{
 
 <script>
 
-const loginScreen = document.getElementById("loginScreen");
-const gameScreen = document.getElementById("gameScreen");
-
+const login = document.getElementById("login");
+const game = document.getElementById("game");
 const board = document.getElementById("board");
-
-const scoreText = document.getElementById("score");
-
-const message = document.getElementById("message");
-
-let studentId = "";
-let studentName = "";
+const msg = document.getElementById("msg");
+const scoreText = document.getElementById("scoreText");
 
 let numbers = [1,1,2,2,3,3];
 
@@ -138,9 +112,10 @@ let firstCard = null;
 let secondCard = null;
 
 let score = 0;
-let openedCount = 0;
+let opened = 0;
 
-
+let studentId = "";
+let studentName = "";
 
 async function startGame(){
 
@@ -149,34 +124,25 @@ async function startGame(){
     studentName = document.getElementById("studentName").value.trim();
 
     if(studentId === "" || studentName === ""){
-
-        message.innerText = "학번과 이름을 입력하세요";
-
+        msg.innerText = "학번과 이름을 입력하세요";
         return;
     }
 
-
-    // 중복 참여 검사
     const check = await fetch(`/api/check?id=${studentId}`);
 
     const result = await check.json();
 
     if(result.exists){
-
-        message.innerText = "이미 참여했습니다";
-
+        msg.innerText = "이미 참여했습니다";
         return;
     }
 
+    login.classList.add("hidden");
 
-    loginScreen.classList.add("hidden");
-
-    gameScreen.classList.remove("hidden");
+    game.classList.remove("hidden");
 
     createCards();
 }
-
-
 
 function createCards(){
 
@@ -188,63 +154,40 @@ function createCards(){
 
         card.className = "card";
 
-        card.dataset.number = number;
-
         card.innerText = number;
 
+        card.dataset.number = number;
 
         card.addEventListener("click", async () => {
 
-            if(
-                card.classList.contains("open") ||
-                card.classList.contains("done")
-            ){
+            if(card.classList.contains("open")){
                 return;
             }
 
-
-            // 카드 공개
             card.classList.add("open");
 
-            openedCount++;
+            opened++;
 
-
-            // 첫 번째 카드
             if(firstCard === null){
 
                 firstCard = card;
-
                 return;
             }
 
-
-            // 두 번째 카드
             secondCard = card;
 
-
-            // 짝 맞음
             if(firstCard.dataset.number === secondCard.dataset.number){
-
-                firstCard.classList.add("done");
-
-                secondCard.classList.add("done");
 
                 score++;
 
                 scoreText.innerText = `점수 : ${score}`;
             }
 
-
-            // 틀려도 다시 안 뒤집힘
             firstCard = null;
-
             secondCard = null;
 
+            if(opened === 6){
 
-            // 모든 카드 공개
-            if(openedCount === 6){
-
-                // 결과 저장
                 await fetch("/api/save", {
 
                     method:"POST",
@@ -254,14 +197,12 @@ function createCards(){
                     },
 
                     body:JSON.stringify({
-
                         studentId,
                         studentName,
                         score
-
                     })
-                });
 
+                });
 
                 setTimeout(() => {
 
