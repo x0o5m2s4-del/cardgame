@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>카드게임</title>
+
+<style>
+
+body{
+    font-family:sans-serif;
+    background:#f5f5f5;
+
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+
+    min-height:100vh;
+    margin:0;
+}
+
+.container{
+    text-align:center;
+}
+
+input{
+    padding:10px;
+    margin:5px;
+    width:220px;
+    font-size:16px;
+}
+
+button{
+    padding:10px 20px;
+    margin-top:10px;
+    font-size:16px;
+    cursor:pointer;
+}
+
+.game-board{
+    display:grid;
+    grid-template-columns:repeat(3,120px);
+    gap:15px;
+    margin-top:20px;
+}
+
+.card{
+    width:120px;
+    height:160px;
+
+    background:#4a90e2;
+    border-radius:12px;
+
+    display:flex;
+    justify-content:center;
+    align-items:center;
+
+    font-size:40px;
+    font-weight:bold;
+
+    color:transparent;
+
+    cursor:pointer;
+
+    user-select:none;
+
+    transition:0.2s;
+}
+
+.card.open{
+    background:white;
+    color:black;
+}
+
+.card.done{
+    background:#cccccc;
+    color:black;
+    cursor:default;
+}
+
+.hidden{
+    display:none;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="container" id="loginScreen">
+
+    <h1>카드 짝맞추기</h1>
+
+    <input type="text" id="studentId" placeholder="학번 입력">
+    <br>
+
+    <input type="text" id="studentName" placeholder="이름 입력">
+    <br>
+
+    <button onclick="startGame()">
+        게임 시작
+    </button>
+
+    <p id="message"></p>
+
+</div>
+
+
+<div class="container hidden" id="gameScreen">
+
+    <h2 id="score">
+        점수 : 0
+    </h2>
+
+    <div class="game-board" id="board"></div>
+
+</div>
+
+<script>
+
+const loginScreen = document.getElementById("loginScreen");
+const gameScreen = document.getElementById("gameScreen");
+
+const board = document.getElementById("board");
+
+const scoreText = document.getElementById("score");
+
+const message = document.getElementById("message");
+
+let studentId = "";
+let studentName = "";
+
+let numbers = [1,1,2,2,3,3];
+
+let firstCard = null;
+let secondCard = null;
+
+let score = 0;
+let openedCount = 0;
+
+
+
+async function startGame(){
+
+    studentId = document.getElementById("studentId").value.trim();
+
+    studentName = document.getElementById("studentName").value.trim();
+
+    if(studentId === "" || studentName === ""){
+
+        message.innerText = "학번과 이름을 입력하세요";
+
+        return;
+    }
+
+
+    // 중복 참여 검사
+    const check = await fetch(`/api/check?id=${studentId}`);
+
+    const result = await check.json();
+
+    if(result.exists){
+
+        message.innerText = "이미 참여했습니다";
+
+        return;
+    }
+
+
+    loginScreen.classList.add("hidden");
+
+    gameScreen.classList.remove("hidden");
+
+    createCards();
+}
+
+
+
+function createCards(){
+
+    numbers.sort(() => Math.random() - 0.5);
+
+    numbers.forEach(number => {
+
+        const card = document.createElement("div");
+
+        card.className = "card";
+
+        card.dataset.number = number;
+
+        card.innerText = number;
+
+
+        card.addEventListener("click", async () => {
+
+            if(
+                card.classList.contains("open") ||
+                card.classList.contains("done")
+            ){
+                return;
+            }
+
+
+            // 카드 공개
+            card.classList.add("open");
+
+            openedCount++;
+
+
+            // 첫 번째 카드
+            if(firstCard === null){
+
+                firstCard = card;
+
+                return;
+            }
+
+
+            // 두 번째 카드
+            secondCard = card;
+
+
+            // 짝 맞음
+            if(firstCard.dataset.number === secondCard.dataset.number){
+
+                firstCard.classList.add("done");
+
+                secondCard.classList.add("done");
+
+                score++;
+
+                scoreText.innerText = `점수 : ${score}`;
+            }
+
+
+            // 틀려도 다시 안 뒤집힘
+            firstCard = null;
+
+            secondCard = null;
+
+
+            // 모든 카드 공개
+            if(openedCount === 6){
+
+                // 결과 저장
+                await fetch("/api/save", {
+
+                    method:"POST",
+
+                    headers:{
+                        "Content-Type":"application/json"
+                    },
+
+                    body:JSON.stringify({
+
+                        studentId,
+                        studentName,
+                        score
+
+                    })
+                });
+
+
+                setTimeout(() => {
+
+                    alert(`게임 종료!\n최종 점수 : ${score}점`);
+
+                },300);
+            }
+
+        });
+
+        board.appendChild(card);
+
+    });
+}
+
+</script>
+
+</body>
+</html>
